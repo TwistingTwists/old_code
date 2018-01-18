@@ -1,0 +1,60 @@
+
+read_restart restart_last_NVE_OPLS_TIP4P_50_4
+
+################################
+bond_style   hybrid harmonic
+angle_style  hybrid harmonic
+
+bond_coeff   1 harmonic 800.00   0.9572
+angle_coeff  1 harmonic 100.00   104.52
+
+pair_style  hybrid/overlay lj/cut 5.0 lj/cut/tip4p/long 1 2 1 1 0.15 10.0 5.0
+kspace_style pppm/tip4p 0.9e-5
+
+# O - 1
+# H - 2
+
+# C - 3
+
+# these parameters are taken from LAMMPS website.
+pair_coeff 1 1  lj/cut/tip4p/long 0.1550 3.1536 	# O-O
+pair_coeff 1 2  lj/cut/tip4p/long 0.0 0.0 			# O-H
+pair_coeff 2 2  lj/cut/tip4p/long 0.0 0.0 			# H-H
+
+# for CH4 OPLS_SITE model is used.
+pair_coeff 3 3 lj/cut 0.294 3.73 				# do as Jorengson says.
+
+# for water CH4 interaction -- Lorentz-Berthelot rules
+pair_coeff 1 3 lj/cut 0.2135 3.4418
+pair_coeff 2 3 lj/cut 0.0 1.865  
+######################################
+
+reset_timestep 0
+
+variable tdamp string 200
+variable pdamp string 800
+variable therm string 50
+variable FILENAME string OPLS_TIP4P_msg24810
+
+
+min_style               cg
+minimize                1.0e-5 1.0e-6 4000 40000
+
+neighbor                1.0 bin
+neigh_modify            delay 0 every 1 check yes
+
+fix             2 all shake 0.0001 20 0 b 1 a 1
+fix             NPT all npt temp 283.0 283.0 ${tdamp} iso 150.0 150.0 ${pdamp}
+
+thermo         ${therm}
+
+timestep        2	
+dump           NPT all atom 1000 dump_NPT_${tdamp}_${pdamp}_${FILENAME}.lammpstrj
+log            run_npt_${FILENAME}.txt
+
+restart  100000 restart_NPT_*_${pdamp}_${FILENAME}
+restart  10000 restart_NPT_${pdamp}_${FILENAME}.1 restart_NPT_${pdamp}_${FILENAME}.2
+
+run 		   20000000
+
+write_restart   restart_last_NPT_${tdamp}_${pdamp}_${FILENAME}

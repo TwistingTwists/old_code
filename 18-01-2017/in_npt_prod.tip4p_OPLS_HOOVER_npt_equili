@@ -1,0 +1,66 @@
+################################## VARIABLES ##################################
+variable filename string 25_prod
+variable folder string NPT_Equili_100_250/
+
+variable tdamp string 700
+variable pdamp string 1000
+variable temp string 100
+variable pressure string 250
+variable jump equal 2
+
+variable start_time equal 9000000							#___________________________________
+reset_timestep ${start_time}					  			   		
+variable end_time equal ${start_time}+10000000 		# i.e. 18+20ns
+
+
+################################## READ RESTART FILE ##################################
+variable restartfile string restart_last_NPT_Jan_24_prod         #___________________________________
+read_restart ${folder}${restartfile} 		
+
+
+################################## READ RESTART FILE ##################################
+
+include      .\pairing_tip4p_OPLS.parameters_ONLY
+
+################################## ##################################
+
+
+min_style               cg
+minimize                1.0e-8 1.0e-8 4000 40000
+
+neighbor                1.0 bin
+neigh_modify            delay 0 every 1 check yes cluster yes
+
+velocity all create ${temp} 482748 mom yes rot no dist gaussian
+
+fix             2 all shake 0.0001 20 0 b 1 a 1
+fix             NPT all npt temp ${temp} ${temp} ${tdamp} iso ${pressure} ${pressure} ${pdamp}
+
+dump           	NPT_dcd all dcd 1000 ${folder}dump_npt_${filename}.dcd
+dump_modify    	NPT_dcd unwrap yes
+
+log          	${folder}run_NPT_long_${filename}.txt
+restart  		100000 ${folder}restart_archive_*_${filename}
+restart  		10000 ${folder}restart_NPT_${filename}.1 ${folder}restart_NVE_${filename}.2
+
+timestep        2
+thermo 			500
+thermo_style 	custom time cpuremain enthalpy press temp pe ke etotal vol
+
+run            ${end_time}
+
+write_restart  ${folder}restart_last_NPT_${filename}
+
+
+
+##################################            ##################################
+################################## NOT USEFUL ##################################
+##################################            ##################################
+#dump           NVE_xyz all xyz 1000 ${folder}dump_nve_long_${filename}.xyz
+#dump_modify   NVE_xyz pbc yes
+#dump_modify   NPT pbc yes
+#dump_modify   NPT element O H C 
+#neigh_modify            delay 0 every 1 check yes cluster yes
+#fix             NPT all npt temp ${temp} ${temp} ${tdamp} iso 250.0 250.0 ${pdamp}
+
+#run            14000000

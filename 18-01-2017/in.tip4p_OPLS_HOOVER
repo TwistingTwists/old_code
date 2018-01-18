@@ -1,0 +1,59 @@
+
+include      .\units.parameters
+
+#### data file is read 
+read_data    .\CH4_H2O_jan_2017.coordinates
+
+include      .\pairing_tip4p_OPLS.parameters_ONLY
+
+
+min_style               cg
+minimize                1.0e-8 1.0e-8 4000 40000
+
+neighbor                1.0 bin
+neigh_modify            delay 0 every 1 check yes cluster yes
+
+################################## VARIABLES ##################################
+variable filename string Jan_24
+variable folder string NVT_Equilibriation_/
+
+variable tdamp string 700
+variable pdamp string 1000
+variable temp string 100
+
+velocity all create ${temp} 482748 mom yes rot yes dist gaussian
+#velocity all create ${temp} 482748 mom yes rot no dist gaussian
+
+fix 			fixNVT all nvt temp ${temp} ${temp} ${tdamp}  
+fix             2 all shake 0.0001 30 0 b 1 a 1
+
+thermo 			500
+thermo_style custom step cpuremain enthalpy press temp pe ke etotal vol
+
+
+dump           NPT all dcd 1000 ${folder}dump_npt_long_${filename}.dcd
+dump_modify   NPT unwrap yes
+
+log            ${folder}run_NPT_long_${filename}.txt
+
+restart  	100000 ${folder}restart_archive_*_${filename}
+restart  	10000 ${folder}restart_NPT_${filename}.1 restart_NVE_${filename}.2
+
+timestep        2
+run            2500000
+
+write_restart  ${folder}restart_last_NPT_${filename}
+
+
+
+##################################            ##################################
+################################## NOT USEFUL ##################################
+##################################            ##################################
+#dump           NVE_xyz all xyz 1000 ${folder}dump_nve_long_${filename}.xyz
+#dump_modify   NVE_xyz pbc yes
+#dump_modify   NPT pbc yes
+#dump_modify   NPT element O H C 
+#neigh_modify            delay 0 every 1 check yes cluster yes
+#fix             NPT all npt temp ${temp} ${temp} ${tdamp} iso 250.0 250.0 ${pdamp}
+
+#run            14000000
